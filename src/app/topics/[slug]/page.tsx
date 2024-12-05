@@ -14,7 +14,7 @@ export default function TopcShowPage({params}: TopicShowPageProps) {
             </h1>
         </div>
         <div>
-            <PostCreateForm />
+            <PostCreateForm slug={slug} />
         </div>
     </div>;
 }

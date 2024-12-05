@@ -23,6 +23,7 @@ interface CreatePostFormState {
 }
 
 export async function createPost(
+  slug: string,
   formState: CreatePostFormState,
   formData: FormData
 ): Promise<CreatePostFormState> {
@@ -36,13 +37,57 @@ export async function createPost(
   }
 
   const session = await auth();
-  if(!session || !session.user) {
-    return {errors: {
-      _form: ["You must be logged in to create a post"],
-    }}
+  if (!session || !session.user) {
+    return {
+      errors: {
+        _form: ["You must be logged in to create a post"],
+      },
+    };
   }
 
-  return {
-    errors: {},
-  };
+  const topic = await db.topic.findFirst({
+    where: {
+      slug,
+    },
+  });
+
+  if (!topic) {
+    return {
+      errors: {
+        _form: ["Topic not found"],
+      },
+    };
+  }
+
+  let post: Post;
+
+  try {
+    post = await db.post.create({
+      data: {
+        title: result.data.title,
+        content: result.data.content,
+        userId: session.user.id,
+        topicId: topic.id,
+      },
+    });
+
+    //await revalidatePath(paths.topic(slug));
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      return {
+        errors: {
+          _form: [err.message],
+        },
+      };
+    } else {
+      return {
+        errors: {
+          _form: ["Failed to create post"],
+        },
+      }
+    }
+  }
+
+  revalidatePath(paths.topicShow(slug));
+  redirect(paths.postShow(slug, post.id));
 }
